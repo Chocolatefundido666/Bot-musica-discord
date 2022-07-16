@@ -1,95 +1,37 @@
+const createBar = require("string-progressbar");
 const { MessageEmbed } = require("discord.js");
-const prettyMilliseconds = require("pretty-ms");
 
 module.exports = {
   name: "nowplaying",
-  description: "See what song is currently playing",
-  usage: "",
-  permissions: {
-    channel: ["VIEW_CHANNEL", "SEND_MESSAGES", "EMBED_LINKS"],
-    member: [],
-  },
-  aliases: ["np", "nowplaying", "now playing"],
-  /**
-   *
-   * @param {import("../structures/DiscordMusicBot")} client
-   * @param {import("discord.js").Message} message
-   * @param {string[]} args
-   * @param {*} param3
-   */
-  run: async (client, message, args, { GuildDB }) => {
-    let player = await client.Manager.get(message.guild.id);
-    if (!player)
-      return client.sendTime(
-        message.channel,
-        "❌ | **Nothing is playing right now...**"
+  aliases: ["np"],
+  description: "Show now playing song",
+  execute(message) {
+    const queue = message.client.queue.get(message.guild.id);
+    if (!queue) return message.reply("There is nothing playing!").catch(console.error);
+
+    const song = queue.songs[0];
+    const seek = (queue.connection.dispatcher.streamTime - queue.connection.dispatcher.pausedTime) / 1000;
+    const left = song.duration - seek;
+
+    let nowPlaying = new MessageEmbed()
+      .setTitle(`${song.title}`)
+      .setDescription(`URL: \n${song.url}`)
+      .setColor("#A9D42A")
+      .setAuthor("| Now Playing |");
+
+    if (song.duration > 0) {
+      nowPlaying.addField(
+        "\u200b",
+        new Date(seek * 1000).toISOString().substr(11, 8) +
+          "[" +
+          createBar(song.duration == 0 ? seek : song.duration, seek, 20)[0] +
+          "]" +
+          (song.duration == 0 ? " ◉ LIVE" : new Date(song.duration * 1000).toISOString().substr(11, 8)),
+        false
       );
+      nowPlaying.setFooter("Time Remaining: " + new Date(left * 1000).toISOString().substr(11, 8));
+    }
 
-    let song = player.queue.current;
-    let QueueEmbed = new MessageEmbed()
-      .setAuthor({
-        name: "Currently playing",
-        iconURL: client.botconfig.IconURL,
-      })
-      .setColor(client.botconfig.EmbedColor)
-      .setDescription(`[${song.title}](${song.uri})`)
-      .addField("Requested by", `${song.requester}`, true)
-      .addField(
-        "Duration",
-        `${
-          client.ProgressBar(player.position, player.queue.current.duration, 15)
-            .Bar
-        } \`${prettyMilliseconds(player.position, {
-          colonNotation: true,
-        })} / ${prettyMilliseconds(player.queue.current.duration, {
-          colonNotation: true,
-        })}\``
-      )
-      .setThumbnail(player.queue.current.displayThumbnail());
-    return message.channel.send({ embeds: [QueueEmbed] });
-  },
-
-  SlashCommand: {
-    /**
-     *
-     * @param {import("../structures/DiscordMusicBot")} client
-     * @param {import("discord.js").Message} message
-     * @param {string[]} args
-     * @param {*} param3
-     */
-    run: async (client, interaction, args, { GuildDB }) => {
-      let player = await client.Manager.get(interaction.guild_id);
-      if (!player.queue.current)
-        return client.sendTime(
-          interaction,
-          "❌ | **Nothing is playing right now...**"
-        );
-
-      let song = player.queue.current;
-      let QueueEmbed = new MessageEmbed()
-        .setAuthor({
-          name: "Currently playing",
-          iconURL: client.botconfig.IconURL,
-        })
-        .setColor(client.botconfig.EmbedColor)
-        .setDescription(`[${song.title}](${song.uri})`)
-        .addField("Requested by", `${song.requester}`, true)
-        .addField(
-          "Duration",
-          `${
-            client.ProgressBar(
-              player.position,
-              player.queue.current.duration,
-              15
-            ).Bar
-          } \`${prettyMilliseconds(player.position, {
-            colonNotation: true,
-          })} / ${prettyMilliseconds(player.queue.current.duration, {
-            colonNotation: true,
-          })}\``
-        )
-        .setThumbnail(player.queue.current.displayThumbnail());
-      return interaction.send(QueueEmbed);
-    },
-  },
+    return message.channel.send(nowPlaying);
+  }
 };

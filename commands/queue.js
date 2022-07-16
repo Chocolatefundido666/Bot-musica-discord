@@ -1,230 +1,83 @@
 const { MessageEmbed } = require("discord.js");
-const _ = require("lodash");
-const prettyMilliseconds = require("pretty-ms");
 
 module.exports = {
   name: "queue",
-  description: "Shows all currently enqueued songs",
-  usage: "",
-  permissions: {
-    channel: ["VIEW_CHANNEL", "SEND_MESSAGES", "EMBED_LINKS"],
-    member: [],
-  },
+  cooldown: 5,
   aliases: ["q"],
-  /**
-   *
-   * @param {import("../structures/DiscordMusicBot")} client
-   * @param {import("discord.js").Message} message
-   * @param {string[]} args
-   * @param {*} param3
-   */
-  run: async (client, message, args, { GuildDB }) => {
-    let player = await client.Manager.get(message.guild.id);
-    if (!player)
-      return client.sendTime(
-        message.channel,
-        "❌ | **Nothing is playing right now...**"
-      );
+  description: "Show the music queue and now playing.",
+  async execute(message) {
+    const permissions = message.channel.permissionsFor(message.client.user);
+    if (!permissions.has(["MANAGE_MESSAGES", "ADD_REACTIONS"]))
+      return message.reply("Missing permission to manage messages or add reactions");
 
-    if (!player.queue || !player.queue.length || player.queue === 0) {
-      let QueueEmbed = new MessageEmbed()
-        .setAuthor({
-          name: "Currently playing",
-          iconURL: client.botconfig.IconURL,
-        })
-        .setColor(client.botconfig.EmbedColor)
-        .setDescription(
-          `[${player.queue.current.title}](${player.queue.current.uri})`
-        )
-        .addField("Requested by", `${player.queue.current.requester}`, true)
-        .addField(
-          "Duration",
-          `${
-            client.ProgressBar(
-              player.position,
-              player.queue.current.duration,
-              15
-            ).Bar
-          } \`[${prettyMilliseconds(player.position, {
-            colonNotation: true,
-          })} / ${prettyMilliseconds(player.queue.current.duration, {
-            colonNotation: true,
-          })}]\``
-        )
-        .setThumbnail(player.queue.current.displayThumbnail());
-      return message.channel.send({ embeds: [QueueEmbed] });
+    const queue = message.client.queue.get(message.guild.id);
+    if (!queue) return message.channel.send("❌ **Nothing playing in this server**");
+
+    let currentPage = 0;
+    const embeds = generateQueueEmbed(message, queue.songs);
+
+    const queueEmbed = await message.channel.send(
+      `**Current Page - ${currentPage + 1}/${embeds.length}**`,
+      embeds[currentPage]
+    );
+
+    try {
+      await queueEmbed.react("⬅️");
+      await queueEmbed.react("⏹");
+      await queueEmbed.react("➡️");
+    } catch (error) {
+      console.error(error);
+      message.channel.send(error.message).catch(console.error);
     }
 
-    let Songs = player.queue.map((t, index) => {
-      t.index = index;
-      return t;
-    });
+    const filter = (reaction, user) =>
+      ["⬅️", "⏹", "➡️"].includes(reaction.emoji.name) && message.author.id === user.id;
+    const collector = queueEmbed.createReactionCollector(filter, { time: 60000 });
 
-    let ChunkedSongs = _.chunk(Songs, 10); //How many songs to show per-page
-
-    let Pages = ChunkedSongs.map((Tracks) => {
-      let SongsDescription = Tracks.map(
-        (t) =>
-          `\`${t.index + 1}.\` [${t.title}](${t.uri}) \n\`${prettyMilliseconds(
-            t.duration,
-            {
-              colonNotation: true,
-            }
-          )}\` **|** Requested by: ${t.requester}\n`
-      ).join("\n");
-
-      let Embed = new MessageEmbed()
-        .setAuthor({ name: "Queue", iconURL: client.botconfig.IconURL })
-        .setColor(client.botconfig.EmbedColor)
-        .setDescription(
-          `**Currently Playing:** \n[${player.queue.current.title}](${player.queue.current.uri}) \n\n**Up Next:** \n${SongsDescription}\n\n`
-        )
-        .addField("Total songs: \n", `\`${player.queue.totalSize - 1}\``, true)
-        .addField(
-          "Total length: \n",
-          `\`${prettyMilliseconds(player.queue.duration, {
-            colonNotation: true,
-          })}\``,
-          true
-        )
-        .addField("Requested by:", `${player.queue.current.requester}`, true)
-        .addField(
-          "Current song duration:",
-          `${
-            client.ProgressBar(
-              player.position,
-              player.queue.current.duration,
-              15
-            ).Bar
-          } \`${prettyMilliseconds(player.position, {
-            colonNotation: true,
-          })} / ${prettyMilliseconds(player.queue.current.duration, {
-            colonNotation: true,
-          })}\``
-        )
-        .setThumbnail(player.queue.current.displayThumbnail());
-
-      return Embed;
-    });
-
-    if (!Pages.length || Pages.length === 1)
-      return message.channel.send({ embeds: [Pages[0]] });
-    else client.Pagination(message, Pages);
-  },
-  SlashCommand: {
-    /*
-    options: [
-      {
-          name: "page",
-          value: "[page]",
-          type: 4,
-          required: false,
-          description: "Enter the page of the queue you would like to view",
-      },
-  ],
-  */
-    /**
-     *
-     * @param {import("../structures/DiscordMusicBot")} client
-     * @param {import("discord.js").Message} message
-     * @param {string[]} args
-     * @param {*} param3
-     */
-    run: async (client, interaction, args, { GuildDB }) => {
-      let player = await client.Manager.get(interaction.guild_id);
-      if (!player)
-        return client.sendTime(
-          interaction,
-          "❌ | **Nothing is playing right now...**"
-        );
-
-      if (!player.queue || !player.queue.length || player.queue === 0) {
-        let QueueEmbed = new MessageEmbed()
-          .setAuthor({
-            name: "Currently playing",
-            iconURL: client.botconfig.IconURL,
-          })
-          .setColor(client.botconfig.EmbedColor)
-          .setDescription(
-            `[${player.queue.current.title}](${player.queue.current.uri})`
-          )
-          .addField("Requested by", `${player.queue.current.requester}`, true)
-          .addField(
-            "Duration",
-            `${
-              client.ProgressBar(
-                player.position,
-                player.queue.current.duration,
-                15
-              ).Bar
-            } \`[${prettyMilliseconds(player.position, {
-              colonNotation: true,
-            })} / ${prettyMilliseconds(player.queue.current.duration, {
-              colonNotation: true,
-            })}]\``
-          )
-          .setThumbnail(player.queue.current.displayThumbnail());
-        return interaction.send(QueueEmbed);
+    collector.on("collect", async (reaction, user) => {
+      try {
+        if (reaction.emoji.name === "➡️") {
+          if (currentPage < embeds.length - 1) {
+            currentPage++;
+            queueEmbed.edit(`**Current Page - ${currentPage + 1}/${embeds.length}**`, embeds[currentPage]);
+          }
+        } else if (reaction.emoji.name === "⬅️") {
+          if (currentPage !== 0) {
+            --currentPage;
+            queueEmbed.edit(`**Current Page - ${currentPage + 1}/${embeds.length}**`, embeds[currentPage]);
+          }
+        } else {
+          collector.stop();
+          reaction.message.reactions.removeAll();
+        }
+        await reaction.users.remove(message.author.id);
+      } catch (error) {
+        console.error(error);
+        return message.channel.send(error.message).catch(console.error);
       }
-
-      let Songs = player.queue.map((t, index) => {
-        t.index = index;
-        return t;
-      });
-
-      let ChunkedSongs = _.chunk(Songs, 10); //How many songs to show per-page
-
-      let Pages = ChunkedSongs.map((Tracks) => {
-        let SongsDescription = Tracks.map(
-          (t) =>
-            `\`${t.index + 1}.\` [${t.title}](${
-              t.uri
-            }) \n\`${prettyMilliseconds(t.duration, {
-              colonNotation: true,
-            })}\` **|** Requested by: ${t.requester}\n`
-        ).join("\n");
-
-        let Embed = new MessageEmbed()
-          .setAuthor({ name: "Queue", iconURL: client.botconfig.IconURL })
-          .setColor(client.botconfig.EmbedColor)
-          .setDescription(
-            `**Currently Playing:** \n[${player.queue.current.title}](${player.queue.current.uri}) \n\n**Up Next:** \n${SongsDescription}\n\n`
-          )
-          .addField(
-            "Total songs: \n",
-            `\`${player.queue.totalSize - 1}\``,
-            true
-          )
-          .addField(
-            "Total length: \n",
-            `\`${prettyMilliseconds(player.queue.duration, {
-              colonNotation: true,
-            })}\``,
-            true
-          )
-          .addField("Requested by:", `${player.queue.current.requester}`, true)
-          .addField(
-            "Current song duration:",
-            `${
-              client.ProgressBar(
-                player.position,
-                player.queue.current.duration,
-                15
-              ).Bar
-            } \`[${prettyMilliseconds(player.position, {
-              colonNotation: true,
-            })} / ${prettyMilliseconds(player.queue.current.duration, {
-              colonNotation: true,
-            })}]\``
-          )
-          .setThumbnail(player.queue.current.displayThumbnail());
-
-        return Embed;
-      });
-
-      if (!Pages.length || Pages.length === 1)
-        return interaction.send(Pages[0]);
-      else client.Pagination(interaction, Pages);
-    },
-  },
+    });
+  }
 };
+
+function generateQueueEmbed(message, queue) {
+  let embeds = [];
+  let k = 10;
+
+  for (let i = 0; i < queue.length; i += 10) {
+    const current = queue.slice(i, k);
+    let j = i;
+    k += 10;
+
+    const info = current.map((track) => `${++j} - [${track.title}](${track.url})`).join("\n");
+
+    const embed = new MessageEmbed()
+      .setTitle("Song Queue\n")
+      .setThumbnail(message.guild.iconURL())
+      .setColor("#F8AA2A")
+      .setDescription(`**Current Song - [${queue[0].title}](${queue[0].url})**\n\n${info}`)
+      .setFooter(`Have a nice day with music!`);
+    embeds.push(embed);
+  }
+
+  return embeds;
+}

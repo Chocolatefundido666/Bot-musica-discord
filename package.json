@@ -1,64 +1,34 @@
 {
-  "name": "discord-musicbot",
-  "version": "4.2.0",
-  "description": "Very simple discord music bot with the discord.js with Song Name playing. It can able to play music with the song name",
+  "name": "henwy",
+  "version": "0.9.0",
+  "description": "Discord music bot built with discord.js",
   "main": "index.js",
-  scripts: {
-  "test": "echo "Error: no test specified" && exit 1",
-  "start": "node ."
-}
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/SudhanPlayz/Discord-MusicBot.git"
-  },
+  "author": "KingRain <samjoe55555@gmail.com>",
+  "private": true,
+  "homepage": "https://github.com/KingRain/SimpleDiscordMusicBot",
+  "repository": "KingRain/SimpleDiscordMusicBot",
+  "bugs": "https://github.com/KingRain/SimpleDiscordMusicBot/issues",
   "engines": {
-    "node": ">=12.x"
+    "node": ">=12.0.0"
   },
-  "keywords": [
-    "discord",
-    "discord-bot",
-    "discord-musicbot",
-    "music",
-    "discord-music"
-  ],
-  "author": "SudhanPlayz",
-  "license": "SEE LICENSE IN LICENSE",
-  "bugs": {
-    "url": "https://github.com/SudhanPlayz/Discord-MusicBot/issues"
-  },
-  "homepage": "https://github.com/SudhanPlayz/Discord-MusicBot#readme",
   "dependencies": {
-    "colors": "^1.4.0",
-    "cpu-stat": "^2.0.1",
-    "discord.js": "^13.8.0",
-    "discordjs-activity": "1.4.1",
-    "dotenv": "^16.0.1",
-    "erela.js": "^2.3.2",
-    "erela.js-apple": "^1.2.2",
-    "erela.js-deezer": "^1.0.7",
-    "erela.js-facebook": "^1.0.4",
+    "@discordjs/opus": "^0.3.3",
+    "@discordjs/rest": "^0.5.0",
+    "array-move": "^3.0.1",
+    "discord-api-types": "^0.36.1",
+    "discord.js": "^12.5.1",
+    "erela.js": "^2.3.3",
+    "erit-ytdl": "^0.1.2",
     "express": "^4.17.1",
-    "express-session": "^1.17.1",
-    "jsoning": "^0.12.0",
-    "lavasfy": "2.3.0",
+    "ffmpeg-static": "^4.2.3",
     "lodash": "^4.17.21",
     "lyrics-finder": "^21.7.0",
-    "moment": "^2.29.1",
-    "moment-duration-format": "^2.3.2",
-    "mongoose": "^5.12.3",
-    "node-fetch": "^2.6.1",
-    "passport": "^0.5.0",
-    "passport-discord": "^0.1.4",
-    "pretty-ms": "^7.0.1",
-    "socket.io": "^4.0.1",
-    "winston": "^3.3.3"
+    "simple-youtube-api": "^5.1.1",
+    "soundcloud-downloader": "^0.2.3",
+    "string-progressbar": "^1.0.1",
+    "ytdl-core": "^4.11.0"
   },
-  "devDependencies": {
-    "husky": "7.0.4",
-    "lint-staged": "11.2.2",
-    "prettier": "2.4.1"
-  },
-  "lint-staged": {
-    "*.{js,json,md}": "prettier --write"
+  "scripts": {
+    "start": "node index.js"
   }
 }
