@@ -16,7 +16,7 @@
     "@discordjs/rest": "^0.5.0",
     "array-move": "^3.0.1",
     "discord-api-types": "^0.36.1",
-    "discord.js": "^12.5.1",
+    "discord.js": "^13.8.1",
     "erela.js": "^2.3.3",
     "erit-ytdl": "^0.1.2",
     "express": "^4.17.1",
